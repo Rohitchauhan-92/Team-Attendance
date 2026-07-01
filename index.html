@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spyne.ai — Team Leave Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --outer-bg:#24312A;
+    --outer-bg-2:#1B2621;
+    --paper:#F5F7F0;
+    --bar-green:#E4ECDE;
+    --ink:#1E2B23;
+    --ink-soft:#5B6C60;
+    --ink-faint:#8B9A8F;
+    --rule:#C7D3C0;
+    --rule-strong:#9FB097;
+    --gold:#A9862F;
+    --stamp-approved:#2F6E4F;
+    --stamp-pending:#C0812B;
+    --stamp-rejected:#B3413A;
+    --stamp-other:#5B6B63;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,0.03), transparent 40%),
+      linear-gradient(180deg, var(--outer-bg) 0%, var(--outer-bg-2) 100%);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:40px 16px 64px;
+  }
+  a{color:inherit;}
+  .sheet{
+    max-width:1180px;
+    margin:0 auto;
+    background:var(--paper);
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+    position:relative;
+  }
+  .perf{
+    height:16px;
+    background-color:var(--ink);
+    background-image:radial-gradient(circle at center, var(--outer-bg-2) 4.2px, transparent 4.6px);
+    background-size:24px 16px;
+    background-position:12px center;
+  }
+  .perf.bottom{margin-top:0;}
+
+  /* ---------- MASTHEAD ---------- */
+  .masthead{
+    padding:34px 40px 22px;
+    border-bottom:3px double var(--rule-strong);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+  }
+  .masthead-left .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  .masthead-left h1{
+    font-family:'Special Elite', monospace;
+    font-size:clamp(24px,4vw,34px);
+    letter-spacing:.02em;
+    margin:0 0 8px;
+    color:var(--ink);
+  }
+  .masthead-left .period{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .masthead-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .sync-row{display:flex;align-items:center;gap:8px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint);flex:none;}
+  .dot.live{background:var(--stamp-approved);box-shadow:0 0 0 3px rgba(47,110,79,0.18);}
+  .dot.cached{background:var(--stamp-pending);box-shadow:0 0 0 3px rgba(192,129,43,0.18);}
+  #refreshBtn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:7px 12px;
+    cursor:pointer;
+    border-radius:var(--radius);
+  }
+  #refreshBtn:hover{background:var(--stamp-approved);}
+  #refreshBtn:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, .chip:focus-visible, .row-main:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  #sourceLink{text-decoration:underline;text-decoration-color:var(--rule-strong);}
+
+  /* ---------- STATS ---------- */
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    border-bottom:1px solid var(--rule);
+  }
+  .stat{
+    padding:20px 22px;
+    border-right:1px solid var(--rule);
+    position:relative;
+  }
+  .stat:last-child{border-right:none;}
+  .stat .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:28px;
+    line-height:1;
+    color:var(--ink);
+  }
+  .stat .num.accent-approved{color:var(--stamp-approved);}
+  .stat .num.accent-pending{color:var(--stamp-pending);}
+  .stat .num.accent-rejected{color:var(--stamp-rejected);}
+  .stat .label{
+    margin-top:6px;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- FILTER BAR ---------- */
+  .filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:18px 40px;
+    border-bottom:1px solid var(--rule);
+    background:var(--bar-green);
+    align-items:center;
+  }
+  .filters label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:4px;
+  }
+  .filter-field{display:flex;flex-direction:column;}
+  .filters input[type="text"], .filters select{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    padding:7px 9px;
+    border:1px solid var(--rule-strong);
+    border-radius:var(--radius);
+    background:var(--paper);
+    color:var(--ink);
+    min-width:150px;
+  }
+  .filters .search-field input{min-width:200px;}
+  #clearFiltersBtn{
+    align-self:flex-end;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    background:none;
+    border:1px solid var(--rule-strong);
+    color:var(--ink-soft);
+    padding:7px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  #clearFiltersBtn:hover{border-color:var(--stamp-rejected);color:var(--stamp-rejected);}
+  .result-count{
+    margin-left:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- CALENDAR ---------- */
+  .section-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    padding:24px 40px 0;
+    margin:0;
+  }
+  .calendar-wrap{padding:12px 40px 26px; overflow-x:auto;}
+  .calendar{
+    display:grid;
+    grid-template-columns:repeat(7,minmax(96px,1fr));
+    gap:1px;
+    background:var(--rule);
+    border:1px solid var(--rule);
+    min-width:700px;
+  }
+  .cal-dow{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    text-align:center;
+    padding:6px 0;
+  }
+  .cal-cell{
+    background:var(--paper);
+    min-height:74px;
+    padding:6px 6px 8px;
+    position:relative;
+  }
+  .cal-cell.empty{background:var(--bar-green);}
+  .cal-cell.today{box-shadow:inset 0 0 0 2px var(--gold);}
+  .cal-date{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .cal-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;}
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:#fff;
+    padding:2px 5px;
+    border-radius:9px;
+    cursor:pointer;
+    border:none;
+    line-height:1.5;
+  }
+  .chip.approved{background:var(--stamp-approved);}
+  .chip.pending{background:var(--stamp-pending);}
+  .chip.rejected{background:var(--stamp-rejected);}
+  .chip.other{background:var(--stamp-other);}
+  .chip.half{opacity:.72; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.5);}
+  .cal-more{font-family:'IBM Plex Mono', monospace;font-size:9px;color:var(--ink-soft);}
+  .legend{
+    display:flex;gap:16px;flex-wrap:wrap;
+    padding:0 40px 20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .legend i.approved{background:var(--stamp-approved);}
+  .legend i.pending{background:var(--stamp-pending);}
+  .legend i.rejected{background:var(--stamp-rejected);}
+
+  /* ---------- LEDGER TABLE ---------- */
+  .table-wrap{padding:0 40px 30px; overflow-x:auto;}
+  table.ledger{
+    width:100%;
+    border-collapse:collapse;
+    min-width:920px;
+    font-size:13px;
+  }
+  table.ledger thead th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--paper);
+    background:var(--ink);
+    padding:9px 12px;
+    position:sticky;
+    top:0;
+  }
+  .row-main{
+    cursor:pointer;
+    border-bottom:1px solid var(--rule);
+  }
+  .row-main:nth-child(4n+1){background:var(--bar-green);}
+  .row-main:hover{background:#DCE9D6;}
+  .row-main td{padding:10px 12px; vertical-align:top;}
+  .emp-name{font-weight:600;}
+  .emp-id{display:block;font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--ink-soft);}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .dept-cell .sub{display:block;font-size:11px;color:var(--ink-soft);}
+  .stamp{
+    display:inline-block;
+    font-family:'Special Elite', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:3px 10px;
+    border:2px solid currentColor;
+    border-radius:3px;
+    transform:rotate(-4deg);
+    background:rgba(255,255,255,0.4);
+  }
+  .stamp.approved{color:var(--stamp-approved);}
+  .stamp.pending{color:var(--stamp-pending);}
+  .stamp.rejected{color:var(--stamp-rejected);}
+  .stamp.other{color:var(--stamp-other);}
+  .chevron{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--ink-soft);
+    display:inline-block;
+    transition:transform .15s ease;
+  }
+  .row-main.open .chevron{transform:rotate(90deg);}
+  .row-detail{display:none;background:#EEF3EA;border-bottom:1px solid var(--rule);}
+  .row-detail.open{display:table-row;}
+  .row-detail td{padding:14px 30px 20px;}
+  .detail-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:10px 24px;
+  }
+  .detail-item dt{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+    margin:0 0 2px;
+  }
+  .detail-item dd{margin:0;font-size:13px;color:var(--ink);}
+  .empty-state{
+    padding:40px;
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer{
+    padding:18px 40px 28px;
+    border-top:1px solid var(--rule);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
+  @media (max-width:640px){
+    .masthead{padding:24px 20px 18px;}
+    .filters{padding:16px 20px;}
+    .section-title{padding-left:20px;padding-right:20px;}
+    .calendar-wrap{padding:12px 20px 22px;}
+    .legend{padding-left:20px;padding-right:20px;}
+    .table-wrap{padding:0 20px 24px;}
+    .footer{padding:16px 20px 24px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="perf"></div>
+
+  <header class="masthead">
+    <div class="masthead-left">
+      <p class="eyebrow">Spyne.ai · People Ops</p>
+      <h1>Team Leave Register</h1>
+      <p class="period" id="periodLabel">Loading period…</p>
+    </div>
+    <div class="masthead-right">
+      <div class="sync-row">
+        <span class="dot" id="syncDot"></span>
+        <span id="syncLabel">Connecting…</span>
+      </div>
+      <div class="sync-row">
+        <span id="syncedAt"></span>
+        <button id="refreshBtn" type="button">Refresh</button>
+      </div>
+      <a id="sourceLink" href="#" target="_blank" rel="noopener">Open source sheet ↗</a>
+    </div>
+  </header>
+
+  <section class="stats" id="statsRow" aria-label="Summary statistics"></section>
+
+  <section class="filters" aria-label="Filter leave requests">
+    <div class="filter-field search-field">
+      <label for="searchInput">Search employee</label>
+      <input type="text" id="searchInput" placeholder="Name or employee no.">
+    </div>
+    <div class="filter-field">
+      <label for="deptFilter">Department</label>
+      <select id="deptFilter"><option value="">All</option></select>
+    </div>
+    <div class="filter-field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter"><option value="">All</option></select>
+    </div>
+    <div class="filter-field">
+      <label for="typeFilter">Leave type</label>
+      <select id="typeFilter"><option value="">All</option></select>
+    </div>
+    <button id="clearFiltersBtn" type="button">Clear filters</button>
+    <span class="result-count" id="resultCount"></span>
+  </section>
+
+  <h2 class="section-title">Monthly coverage</h2>
+  <div class="calendar-wrap">
+    <div class="calendar" id="calendar"></div>
+  </div>
+  <div class="legend">
+    <span><i class="approved"></i>Approved</span>
+    <span><i class="pending"></i>Pending</span>
+    <span><i class="rejected"></i>Rejected</span>
+    <span>Faded chip = half-day</span>
+    <span>Click a chip to jump to that person</span>
+  </div>
+
+  <h2 class="section-title">Full request ledger</h2>
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Leave type</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Duration</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="ledgerBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">No entries match these filters — try clearing them above.</div>
+  </div>
+
+  <footer class="footer">
+    <span>Source: Keka HR &amp; Payroll Software · every field from the export is shown here, nothing filtered out.</span>
+    <span id="recordTotal"></span>
+  </footer>
+
+  <div class="perf bottom"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5CoviHq9JazEKTfRRimKO8WRYtE9LsxzCLaGChmFXYtP6OKOucXjwAlnU1-QsJbjchgIe8l-W3SPc/pub?gid=957915113&single=true&output=csv";
+
+  // Fallback snapshot, used only if the live sheet cannot be reached from the browser.
+  var FALLBACK_CSV = "Spyne.ai,,,,,,,,,,,,,,,,,,,,,,,\n" +
+"Team Leave Requests - 01-Jul-2026 - 31-Jul-2026,,,,,,,,,,,,,,,,,,,,,,,\n" +
+"Employee Number,Employee Name,Job Title,Business Unit,Department,Sub Department,Location,Cost Center,Reporting Manager,Leave Types,From Date,From Session,To Date,To Session,Total Duration,Unit,Requested On,Requested By,Note,Reason,Status,Last Action Taken by,Last Action Taken on,Next Approver\n" +
+"E6192,Pradeep Kumar Singh,Consultant - Editing,Studio AI,Product,Delivery,\"Gurgaon, Haryana\",,Rohit Chauhan,Paid Leave,06-Jul-2026,FirstHalf,11-Jul-2026,SecondHalf,6,Days,01-Jul-2026,Pradeep Kumar Singh,Note : family function,,Pending,,, Rohit Chauhan\n" +
+"E6505,Jashoda Kumari,Consultant - Editing,Studio AI,Product,Delivery,\"Gurgaon, Haryana\",,Rajmani Tripathi,Paid Leave,06-Jul-2026,FirstHalf,07-Jul-2026,SecondHalf,2,Days,01-Jul-2026,Jashoda Kumari,\"Note : traveling to Vaishno devi with family \",,Pending,,, Rajmani Tripathi\n" +
+"E6562,Omprakash Prajapati,Consultant - Editing,Studio AI,Product,Delivery,\"Gurgaon, Haryana\",,Ajay Dev Rani,Paid Leave,01-Jul-2026,FirstHalf,02-Jul-2026,SecondHalf,2,Days,27-Jun-2026,Omprakash Prajapati,Note : Personal work,,Approved,Ajay Dev Rani,29-Jun-2026,\n" +
+",,,,,,,,,,,,,,,,,,,,,,,\n" +
+"Generated on 01 Jul 2026,,This report is generated by Keka HR and Payroll Software,,,,,,,,,,,,,,,,,,,,,";
+
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  var state = {
+    records: [],
+    filtered: [],
+    reportStart: null,
+    reportEnd: null,
+    filters: { search:"", dept:"", status:"", type:"" }
+  };
+
+  document.getElementById("sourceLink").href = SHEET_CSV_URL;
+
+  // ---------- CSV PARSER (RFC4180-ish, handles quoted commas/newlines) ----------
+  function parseCSV(text){
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++){
+      var c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if (c === '"'){ inQuotes = true; }
+        else if (c === ','){ row.push(field); field = ""; }
+        else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+        else if (c === '\r'){ /* skip */ }
+        else { field += c; }
+      }
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  function extractRecords(rawText){
+    var rows = parseCSV(rawText);
+    var headerIdx = -1;
+    for (var i = 0; i < rows.length; i++){
+      if (rows[i][0] && rows[i][0].trim() === "Employee Number"){ headerIdx = i; break; }
+    }
+    var result = { records: [], titleRow: rows[1] ? rows[1][0] : "" };
+    if (headerIdx === -1) return result;
+    var headers = rows[headerIdx].map(function(h){ return h.trim(); });
+    for (var r = headerIdx + 1; r < rows.length; r++){
+      var cells = rows[r];
+      if (!cells || !cells[0] || !cells[0].trim() || cells[0].indexOf("Generated on") === 0) continue;
+      var obj = {};
+      for (var c = 0; c < headers.length; c++){
+        obj[headers[c]] = (cells[c] || "").trim();
+      }
+      result.records.push(obj);
+    }
+    return result;
+  }
+
+  function parseDate(str){
+    if (!str) return null;
+    var parts = str.split("-");
+    if (parts.length !== 3) return null;
+    var day = parseInt(parts[0], 10);
+    var mIdx = MONTHS.indexOf(parts[1]);
+    var year = parseInt(parts[2], 10);
+    if (mIdx === -1 || isNaN(day) || isNaN(year)) return null;
+    return new Date(year, mIdx, day);
+  }
+
+  function dateKey(d){
+    return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+  }
+
+  function initials(name){
+    if (!name) return "??";
+    var parts = name.trim().split(/\s+/);
+    var s = parts[0][0] || "";
+    if (parts.length > 1) s += parts[parts.length-1][0];
+    return s.toUpperCase();
+  }
+
+  function statusClass(status){
+    var s = (status || "").toLowerCase();
+    if (s === "approved") return "approved";
+    if (s === "pending") return "pending";
+    if (s === "rejected" || s === "cancelled" || s === "withdrawn") return "rejected";
+    return "other";
+  }
+
+  // ---------- LOAD ----------
+  function loadData(){
+    setSyncState("connecting");
+    var url = SHEET_CSV_URL + (SHEET_CSV_URL.indexOf("?") > -1 ? "&" : "?") + "cachebust=" + Date.now();
+    fetch(url, { cache: "no-store" })
+      .then(function(res){
+        if (!res.ok) throw new Error("bad status");
+        return res.text();
+      })
+      .then(function(text){
+        var parsed = extractRecords(text);
+        if (!parsed.records.length) throw new Error("empty");
+        applyData(parsed, true);
+      })
+      .catch(function(){
+        var parsed = extractRecords(FALLBACK_CSV);
+        applyData(parsed, false);
+      });
+  }
+
+  function applyData(parsed, isLive){
+    state.records = parsed.records;
+    var m = (parsed.titleRow || "").match(/(\d{2}-[A-Za-z]{3}-\d{4})\s*-\s*(\d{2}-[A-Za-z]{3}-\d{4})/);
+    if (m){
+      state.reportStart = parseDate(m[1]);
+      state.reportEnd = parseDate(m[2]);
+    } else {
+      var today = new Date();
+      state.reportStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      state.reportEnd = new Date(today.getFullYear(), today.getMonth()+1, 0);
+    }
+    document.getElementById("periodLabel").textContent =
+      formatDateLong(state.reportStart) + " – " + formatDateLong(state.reportEnd);
+
+    setSyncState(isLive ? "live" : "cached");
+    document.getElementById("syncedAt").textContent = "as of " + new Date().toLocaleString();
+
+    populateFilterOptions(state.records);
+    runFilters();
+  }
+
+  function formatDateLong(d){
+    if (!d) return "";
+    return d.getDate() + " " + MONTH_FULL[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  function setSyncState(mode){
+    var dot = document.getElementById("syncDot");
+    var label = document.getElementById("syncLabel");
+    dot.className = "dot";
+    if (mode === "live"){ dot.classList.add("live"); label.textContent = "Live sync"; }
+    else if (mode === "cached"){ dot.classList.add("cached"); label.textContent = "Cached snapshot (sheet unreachable)"; }
+    else { label.textContent = "Connecting…"; }
+  }
+
+  // ---------- FILTER OPTIONS ----------
+  function populateFilterOptions(records){
+    fillSelect("deptFilter", uniqueValues(records, "Department"));
+    fillSelect("statusFilter", uniqueValues(records, "Status"));
+    fillSelect("typeFilter", uniqueValues(records, "Leave Types"));
+  }
+  function uniqueValues(records, key){
+    var set = {};
+    records.forEach(function(r){ if (r[key]) set[r[key]] = true; });
+    return Object.keys(set).sort();
+  }
+  function fillSelect(id, values){
+    var sel = document.getElementById(id);
+    var current = sel.value;
+    sel.innerHTML = '<option value="">All</option>';
+    values.forEach(function(v){
+      var opt = document.createElement("option");
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+    if (values.indexOf(current) > -1) sel.value = current;
+  }
+
+  // ---------- FILTERING ----------
+  function runFilters(){
+    var f = state.filters;
+    var q = f.search.trim().toLowerCase();
+    state.filtered = state.records.filter(function(r){
+      if (f.dept && r["Department"] !== f.dept) return false;
+      if (f.status && r["Status"] !== f.status) return false;
+      if (f.type && r["Leave Types"] !== f.type) return false;
+      if (q){
+        var hay = ((r["Employee Name"]||"") + " " + (r["Employee Number"]||"")).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    renderStats(state.records);
+    renderCalendar(state.filtered);
+    renderTable(state.filtered);
+    document.getElementById("resultCount").textContent = state.filtered.length + " of " + state.records.length + " requests shown";
+    document.getElementById("recordTotal").textContent = state.records.length + " total record(s) in register";
+  }
+
+  // ---------- STATS ----------
+  function renderStats(records){
+    var total = records.length;
+    var approved = 0, pending = 0, rejected = 0, totalDays = 0, onLeaveToday = 0;
+    var today = new Date(); today.setHours(0,0,0,0);
+    records.forEach(function(r){
+      var sc = statusClass(r["Status"]);
+      if (sc === "approved") approved++;
+      else if (sc === "pending") pending++;
+      else if (sc === "rejected") rejected++;
+      var dur = parseFloat(r["Total Duration"]);
+      if (!isNaN(dur)) totalDays += dur;
+      var from = parseDate(r["From Date"]), to = parseDate(r["To Date"]);
+      if (sc === "approved" && from && to && today >= from && today <= to) onLeaveToday++;
+    });
+    var stats = [
+      { label:"Total requests", value:total, cls:"" },
+      { label:"Approved", value:approved, cls:"accent-approved" },
+      { label:"Pending", value:pending, cls:"accent-pending" },
+      { label:"Rejected / other", value:rejected, cls:"accent-rejected" },
+      { label:"Total days requested", value:totalDays, cls:"" },
+      { label:"On leave today", value:onLeaveToday, cls:"accent-approved" }
+    ];
+    var wrap = document.getElementById("statsRow");
+    wrap.innerHTML = "";
+    stats.forEach(function(s){
+      var div = document.createElement("div");
+      div.className = "stat";
+      div.innerHTML = '<div class="num ' + s.cls + '">' + s.value + '</div><div class="label">' + s.label + '</div>';
+      wrap.appendChild(div);
+    });
+  }
+
+  // ---------- CALENDAR ----------
+  function renderCalendar(records){
+    var cal = document.getElementById("calendar");
+    cal.innerHTML = "";
+    if (!state.reportStart) return;
+
+    var year = state.reportStart.getFullYear();
+    var month = state.reportStart.getMonth();
+    var daysInMonth = new Date(year, month+1, 0).getDate();
+    var firstDow = new Date(year, month, 1).getDay();
+
+    var dayMap = {};
+    records.forEach(function(r){
+      var from = parseDate(r["From Date"]);
+      var to = parseDate(r["To Date"]);
+      if (!from || !to) return;
+      var cursor = new Date(from);
+      while (cursor <= to){
+        var key = dateKey(cursor);
+        if (!dayMap[key]) dayMap[key] = [];
+        var isHalf = (cursor.getTime() === from.getTime() && r["From Session"] && r["From Session"] !== "FirstHalf") ||
+                     (cursor.getTime() === to.getTime() && r["To Session"] && r["To Session"] !== "SecondHalf" && from.getTime() !== to.getTime());
+        dayMap[key].push({ rec:r, half: !!isHalf });
+        cursor.setDate(cursor.getDate()+1);
+      }
+    });
+
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(function(d){
+      var el = document.createElement("div");
+      el.className = "cal-dow";
+      el.textContent = d;
+      cal.appendChild(el);
+    });
+
+    for (var i = 0; i < firstDow; i++){
+      var empty = document.createElement("div");
+      empty.className = "cal-cell empty";
+      cal.appendChild(empty);
+    }
+
+    var todayKey = dateKey(new Date());
+
+    for (var day = 1; day <= daysInMonth; day++){
+      var cellDate = new Date(year, month, day);
+      var key = dateKey(cellDate);
+      var cell = document.createElement("div");
+      cell.className = "cal-cell" + (key === todayKey ? " today" : "");
+      var dateEl = document.createElement("div");
+      dateEl.className = "cal-date";
+      dateEl.textContent = day;
+      cell.appendChild(dateEl);
+
+      var entries = dayMap[key] || [];
+      var chips = document.createElement("div");
+      chips.className = "cal-chips";
+      entries.slice(0,4).forEach(function(entry){
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip " + statusClass(entry.rec["Status"]) + (entry.half ? " half" : "");
+        chip.textContent = initials(entry.rec["Employee Name"]);
+        chip.title = entry.rec["Employee Name"] + " — " + entry.rec["Leave Types"] + " (" + entry.rec["Status"] + ")";
+        chip.addEventListener("click", function(name){
+          return function(){
+            document.getElementById("searchInput").value = name;
+            state.filters.search = name;
+            runFilters();
+            document.querySelector(".table-wrap").scrollIntoView({behavior:"smooth", block:"start"});
+          };
+        }(entry.rec["Employee Name"]));
+        chips.appendChild(chip);
+      });
+      if (entries.length > 4){
+        var more = document.createElement("span");
+        more.className = "cal-more";
+        more.textContent = "+" + (entries.length - 4);
+        chips.appendChild(more);
+      }
+      cell.appendChild(chips);
+      cal.appendChild(cell);
+    }
+  }
+
+  // ---------- TABLE ----------
+  var DETAIL_FIELDS = [
+    ["Job Title","Job Title"],
+    ["Business Unit","Business Unit"],
+    ["Sub Department","Sub Department"],
+    ["Location","Location"],
+    ["Cost Center","Cost Center"],
+    ["Reporting Manager","Reporting Manager"],
+    ["Requested On","Requested On"],
+    ["Requested By","Requested By"],
+    ["Note","Note"],
+    ["Reason","Reason"],
+    ["Last Action Taken by","Last Action Taken by"],
+    ["Last Action Taken on","Last Action Taken on"],
+    ["Next Approver","Next Approver"]
+  ];
+
+  function renderTable(records){
+    var body = document.getElementById("ledgerBody");
+    body.innerHTML = "";
+    var emptyState = document.getElementById("emptyState");
+    if (!records.length){
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    records
+      .slice()
+      .sort(function(a,b){
+        var da = parseDate(a["From Date"]), db = parseDate(b["From Date"]);
+        return (da && db) ? da - db : 0;
+      })
+      .forEach(function(r, idx){
+        var sc = statusClass(r["Status"]);
+        var mainRow = document.createElement("tr");
+        mainRow.className = "row-main";
+        mainRow.tabIndex = 0;
+        mainRow.innerHTML =
+          '<td><span class="chevron">▸</span></td>' +
+          '<td><span class="emp-name">' + escapeHtml(r["Employee Name"]) + '</span><span class="emp-id">' + escapeHtml(r["Employee Number"]) + '</span></td>' +
+          '<td class="dept-cell">' + escapeHtml(r["Department"]) + '<span class="sub">' + escapeHtml(r["Business Unit"]) + '</span></td>' +
+          '<td>' + escapeHtml(r["Leave Types"]) + '</td>' +
+          '<td class="mono">' + escapeHtml(r["From Date"]) + '<span class="sub">' + escapeHtml(r["From Session"]) + '</span></td>' +
+          '<td class="mono">' + escapeHtml(r["To Date"]) + '<span class="sub">' + escapeHtml(r["To Session"]) + '</span></td>' +
+          '<td class="mono">' + escapeHtml(r["Total Duration"]) + ' ' + escapeHtml(r["Unit"]) + '</td>' +
+          '<td><span class="stamp ' + sc + '">' + escapeHtml(r["Status"] || "—") + '</span></td>';
+
+        var detailRow = document.createElement("tr");
+        detailRow.className = "row-detail";
+        var detailHtml = '<td colspan="8"><div class="detail-grid">';
+        DETAIL_FIELDS.forEach(function(pair){
+          var val = r[pair[1]];
+          detailHtml += '<div class="detail-item"><dt>' + pair[0] + '</dt><dd>' + (val ? escapeHtml(val) : "—") + '</dd></div>';
+        });
+        detailHtml += '</div></td>';
+        detailRow.innerHTML = detailHtml;
+
+        mainRow.addEventListener("click", function(){
+          mainRow.classList.toggle("open");
+          detailRow.classList.toggle("open");
+        });
+        mainRow.addEventListener("keypress", function(e){
+          if (e.key === "Enter" || e.key === " "){ mainRow.click(); }
+        });
+
+        body.appendChild(mainRow);
+        body.appendChild(detailRow);
+      });
+  }
+
+  function escapeHtml(str){
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  // ---------- EVENTS ----------
+  document.getElementById("searchInput").addEventListener("input", function(e){
+    state.filters.search = e.target.value; runFilters();
+  });
+  document.getElementById("deptFilter").addEventListener("change", function(e){
+    state.filters.dept = e.target.value; runFilters();
+  });
+  document.getElementById("statusFilter").addEventListener("change", function(e){
+    state.filters.status = e.target.value; runFilters();
+  });
+  document.getElementById("typeFilter").addEventListener("change", function(e){
+    state.filters.type = e.target.value; runFilters();
+  });
+  document.getElementById("clearFiltersBtn").addEventListener("click", function(){
+    state.filters = { search:"", dept:"", status:"", type:"" };
+    document.getElementById("searchInput").value = "";
+    document.getElementById("deptFilter").value = "";
+    document.getElementById("statusFilter").value = "";
+    document.getElementById("typeFilter").value = "";
+    runFilters();
+  });
+  document.getElementById("refreshBtn").addEventListener("click", loadData);
+
+  loadData();
+})();
+</script>
+</body>
+</html>
