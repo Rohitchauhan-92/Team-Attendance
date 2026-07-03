@@ -234,6 +234,10 @@
   }
   .cal-cell.empty{background:var(--bar-green);}
   .cal-cell.today{box-shadow:inset 0 0 0 2px var(--gold);}
+  .cal-cell.has-entries{cursor:pointer;}
+  .cal-cell.has-entries:hover{background:#DCE9D6;}
+  .cal-cell.selected{background:#DCE9D6;box-shadow:inset 0 0 0 2px var(--gold);}
+  .cal-cell.today.selected{box-shadow:inset 0 0 0 3px var(--gold);}
   .cal-date{
     font-family:'IBM Plex Mono', monospace;
     font-size:11px;
@@ -270,6 +274,99 @@
   .legend i.approved{background:var(--stamp-approved);}
   .legend i.pending{background:var(--stamp-pending);}
   .legend i.rejected{background:var(--stamp-rejected);}
+
+  /* ---------- DAY DETAIL PANEL ---------- */
+  .day-detail{
+    margin:0 40px 26px;
+    border:1px solid var(--rule-strong);
+    background:var(--bar-green);
+    border-radius:var(--radius);
+    padding:18px 22px 22px;
+  }
+  .day-detail-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:14px;
+    border-bottom:1px solid var(--rule-strong);
+    padding-bottom:10px;
+  }
+  .day-detail-head h3{
+    font-family:'Special Elite', monospace;
+    font-size:18px;
+    margin:0;
+    color:var(--ink);
+  }
+  .day-detail-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  #dayDetailClose{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    background:none;
+    border:1px solid var(--rule-strong);
+    color:var(--ink-soft);
+    padding:5px 9px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  #dayDetailClose:hover{border-color:var(--stamp-rejected);color:var(--stamp-rejected);}
+  .day-detail-empty{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .day-detail-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:12px;
+  }
+  .day-card{
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-left:4px solid var(--ink-faint);
+    padding:12px 14px;
+    border-radius:var(--radius);
+  }
+  .day-card.approved{border-left-color:var(--stamp-approved);}
+  .day-card.pending{border-left-color:var(--stamp-pending);}
+  .day-card.rejected{border-left-color:var(--stamp-rejected);}
+  .day-card.other{border-left-color:var(--stamp-other);}
+  .day-card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .day-card-name{font-weight:600;font-size:13px;color:var(--ink);}
+  .day-card-id{display:block;font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--ink-soft);}
+  .day-card-meta{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:2px 0;
+  }
+  .day-card-meta b{color:var(--ink);font-weight:600;}
+  .day-card-half{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--ink-soft);
+    background:var(--bar-green);
+    border:1px solid var(--rule-strong);
+    padding:1px 5px;
+    border-radius:8px;
+    white-space:nowrap;
+  }
 
   /* ---------- LEDGER TABLE ---------- */
   .table-wrap{padding:0 40px 30px; overflow-x:auto;}
@@ -433,7 +530,16 @@
     <span><i class="pending"></i>Pending</span>
     <span><i class="rejected"></i>Rejected</span>
     <span>Faded chip = half-day</span>
-    <span>Click a chip to jump to that person</span>
+    <span>Click a chip to jump to that person · click a date to list everyone on leave that day</span>
+  </div>
+
+  <div class="day-detail" id="dayDetail" style="display:none;">
+    <div class="day-detail-head">
+      <h3 id="dayDetailTitle">—</h3>
+      <span class="day-detail-count" id="dayDetailCount"></span>
+      <button id="dayDetailClose" type="button">Close</button>
+    </div>
+    <div id="dayDetailBody"></div>
   </div>
 
   <h2 class="section-title">Full request ledger</h2>
@@ -488,7 +594,9 @@
     filtered: [],
     reportStart: null,
     reportEnd: null,
-    filters: { search:"", dept:"", status:"", type:"" }
+    filters: { search:"", dept:"", status:"", type:"" },
+    dayMap: {},
+    selectedDateKey: null
   };
 
   document.getElementById("sourceLink").href = SHEET_CSV_URL;
@@ -730,6 +838,7 @@
         cursor.setDate(cursor.getDate()+1);
       }
     });
+    state.dayMap = dayMap;
 
     ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(function(d){
       var el = document.createElement("div");
@@ -749,14 +858,19 @@
     for (var day = 1; day <= daysInMonth; day++){
       var cellDate = new Date(year, month, day);
       var key = dateKey(cellDate);
+      var entries = dayMap[key] || [];
       var cell = document.createElement("div");
-      cell.className = "cal-cell" + (key === todayKey ? " today" : "");
+      cell.className = "cal-cell" + (key === todayKey ? " today" : "") + (entries.length ? " has-entries" : "") + (key === state.selectedDateKey ? " selected" : "");
+      if (entries.length){
+        cell.tabIndex = 0;
+        cell.setAttribute("role", "button");
+        cell.setAttribute("aria-label", entries.length + " on leave, " + MONTH_FULL[month] + " " + day + ", " + year);
+      }
       var dateEl = document.createElement("div");
       dateEl.className = "cal-date";
       dateEl.textContent = day;
       cell.appendChild(dateEl);
 
-      var entries = dayMap[key] || [];
       var chips = document.createElement("div");
       chips.className = "cal-chips";
       entries.slice(0,4).forEach(function(entry){
@@ -766,7 +880,8 @@
         chip.textContent = initials(entry.rec["Employee Name"]);
         chip.title = entry.rec["Employee Name"] + " — " + entry.rec["Leave Types"] + " (" + entry.rec["Status"] + ")";
         chip.addEventListener("click", function(name){
-          return function(){
+          return function(e){
+            e.stopPropagation();
             document.getElementById("searchInput").value = name;
             state.filters.search = name;
             runFilters();
@@ -782,8 +897,101 @@
         chips.appendChild(more);
       }
       cell.appendChild(chips);
+
+      if (entries.length){
+        var cellDateForLabel = new Date(year, month, day);
+        cell.addEventListener("click", function(k, d, ents, el){
+          return function(){ openDayDetail(k, d, ents, el); };
+        }(key, cellDateForLabel, entries, cell));
+        cell.addEventListener("keypress", function(k, d, ents, el){
+          return function(e){
+            if (e.key === "Enter" || e.key === " "){ openDayDetail(k, d, ents, el); }
+          };
+        }(key, cellDateForLabel, entries, cell));
+      }
+
       cal.appendChild(cell);
     }
+
+    if (state.selectedDateKey && dayMap[state.selectedDateKey]){
+      renderDayDetail(state.selectedDateKey, dayMap[state.selectedDateKey]);
+    } else if (state.selectedDateKey){
+      closeDayDetail();
+    }
+  }
+
+  // ---------- DAY DETAIL PANEL ----------
+  function openDayDetail(key, dateObj, entries, cellEl){
+    state.selectedDateKey = key;
+    document.querySelectorAll(".cal-cell.selected").forEach(function(el){ el.classList.remove("selected"); });
+    if (cellEl) cellEl.classList.add("selected");
+    renderDayDetail(key, entries, dateObj);
+    document.getElementById("dayDetail").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  function renderDayDetail(key, entries, dateObj){
+    var panel = document.getElementById("dayDetail");
+    var title = document.getElementById("dayDetailTitle");
+    var count = document.getElementById("dayDetailCount");
+    var body = document.getElementById("dayDetailBody");
+
+    var parts = key.split("-");
+    var d = dateObj || new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+    var dow = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
+    title.textContent = dow + ", " + formatDateLong(d);
+
+    panel.style.display = "block";
+
+    if (!entries || !entries.length){
+      count.textContent = "0 on leave";
+      body.innerHTML = '<div class="day-detail-empty">No one is on leave this day.</div>';
+      return;
+    }
+
+    count.textContent = entries.length + (entries.length === 1 ? " person" : " people") + " on leave";
+
+    var grid = document.createElement("div");
+    grid.className = "day-detail-grid";
+    entries
+      .slice()
+      .sort(function(a,b){ return (a.rec["Employee Name"]||"").localeCompare(b.rec["Employee Name"]||""); })
+      .forEach(function(entry){
+        var r = entry.rec;
+        var sc = statusClass(r["Status"]);
+        var card = document.createElement("div");
+        card.className = "day-card " + sc;
+        card.innerHTML =
+          '<div class="day-card-top">' +
+            '<div><span class="day-card-name">' + escapeHtml(r["Employee Name"]) + '</span>' +
+            '<span class="day-card-id">' + escapeHtml(r["Employee Number"]) + '</span></div>' +
+            '<span class="stamp ' + sc + '">' + escapeHtml(r["Status"] || "—") + '</span>' +
+          '</div>' +
+          '<div class="day-card-meta"><b>' + escapeHtml(r["Leave Types"] || "—") + '</b>' + (entry.half ? ' <span class="day-card-half">Half day</span>' : '') + '</div>' +
+          '<div class="day-card-meta">' + escapeHtml(r["Department"] || "—") + (r["Sub Department"] ? " · " + escapeHtml(r["Sub Department"]) : "") + '</div>' +
+          '<div class="day-card-meta">' + escapeHtml(r["From Date"]) + ' (' + escapeHtml(r["From Session"]) + ')' + ' → ' + escapeHtml(r["To Date"]) + ' (' + escapeHtml(r["To Session"]) + ')' + '</div>' +
+          '<div class="day-card-meta">Reporting manager: <b>' + escapeHtml(r["Reporting Manager"] || "—") + '</b></div>' +
+          (r["Note"] ? '<div class="day-card-meta">Note: ' + escapeHtml(r["Note"]) + '</div>' : '') +
+          (r["Reason"] ? '<div class="day-card-meta">Reason: ' + escapeHtml(r["Reason"]) + '</div>' : '');
+        card.addEventListener("click", function(name){
+          return function(){
+            document.getElementById("searchInput").value = name;
+            state.filters.search = name;
+            runFilters();
+            document.querySelector(".table-wrap").scrollIntoView({behavior:"smooth", block:"start"});
+          };
+        }(r["Employee Name"]));
+        card.style.cursor = "pointer";
+        grid.appendChild(card);
+      });
+
+    body.innerHTML = "";
+    body.appendChild(grid);
+  }
+
+  function closeDayDetail(){
+    state.selectedDateKey = null;
+    document.getElementById("dayDetail").style.display = "none";
+    document.querySelectorAll(".cal-cell.selected").forEach(function(el){ el.classList.remove("selected"); });
   }
 
   // ---------- TABLE ----------
@@ -888,6 +1096,7 @@
     runFilters();
   });
   document.getElementById("refreshBtn").addEventListener("click", loadData);
+  document.getElementById("dayDetailClose").addEventListener("click", closeDayDetail);
 
   loadData();
 })();
