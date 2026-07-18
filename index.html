@@ -651,13 +651,38 @@
 
   function parseDate(str){
     if (!str) return null;
-    var parts = str.split("-");
-    if (parts.length !== 3) return null;
-    var day = parseInt(parts[0], 10);
-    var mIdx = MONTHS.indexOf(parts[1]);
-    var year = parseInt(parts[2], 10);
-    if (mIdx === -1 || isNaN(day) || isNaN(year)) return null;
-    return new Date(year, mIdx, day);
+    str = String(str).trim();
+    if (!str) return null;
+
+    // DD-Mon-YYYY or DD-Month-YYYY, with '-', '/' or space separators (e.g. 01-Jul-2026, 1 July 2026)
+    var m = str.match(/^(\d{1,2})[-\/\s]+([A-Za-z]+)[-\/\s]+(\d{4})$/);
+    if (m){
+      var day1 = parseInt(m[1], 10);
+      var monTok = m[2].slice(0,3).charAt(0).toUpperCase() + m[2].slice(1,3).toLowerCase();
+      var mIdx1 = MONTHS.indexOf(monTok);
+      var year1 = parseInt(m[3], 10);
+      if (mIdx1 !== -1 && !isNaN(day1) && !isNaN(year1)) return new Date(year1, mIdx1, day1);
+    }
+
+    // YYYY-MM-DD or YYYY/MM/DD (ISO-ish)
+    m = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    if (m){
+      var year2 = parseInt(m[1], 10), month2 = parseInt(m[2], 10) - 1, day2 = parseInt(m[3], 10);
+      if (!isNaN(year2) && !isNaN(month2) && !isNaN(day2)) return new Date(year2, month2, day2);
+    }
+
+    // DD-MM-YYYY or DD/MM/YYYY (numeric, day-first — matches Keka/Indian exports)
+    m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    if (m){
+      var day3 = parseInt(m[1], 10), month3 = parseInt(m[2], 10) - 1, year3 = parseInt(m[3], 10);
+      if (!isNaN(day3) && !isNaN(month3) && !isNaN(year3) && month3 >= 0 && month3 <= 11) return new Date(year3, month3, day3);
+    }
+
+    // Last resort: let the browser try (handles things like "Jul 1, 2026")
+    var native = new Date(str);
+    if (!isNaN(native.getTime())) return new Date(native.getFullYear(), native.getMonth(), native.getDate());
+
+    return null;
   }
 
   function dateKey(d){
