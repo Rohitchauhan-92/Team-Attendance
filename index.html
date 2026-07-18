@@ -234,8 +234,8 @@
   }
   .cal-cell.empty{background:var(--bar-green);}
   .cal-cell.today{box-shadow:inset 0 0 0 2px var(--gold);}
-  .cal-cell.has-entries{cursor:pointer;}
-  .cal-cell.has-entries:hover{background:#DCE9D6;}
+  .cal-cell.clickable{cursor:pointer;}
+  .cal-cell.clickable:hover{background:#DCE9D6;}
   .cal-cell.selected{background:#DCE9D6;box-shadow:inset 0 0 0 2px var(--gold);}
   .cal-cell.today.selected{box-shadow:inset 0 0 0 3px var(--gold);}
   .cal-date{
@@ -885,12 +885,10 @@
       var key = dateKey(cellDate);
       var entries = dayMap[key] || [];
       var cell = document.createElement("div");
-      cell.className = "cal-cell" + (key === todayKey ? " today" : "") + (entries.length ? " has-entries" : "") + (key === state.selectedDateKey ? " selected" : "");
-      if (entries.length){
-        cell.tabIndex = 0;
-        cell.setAttribute("role", "button");
-        cell.setAttribute("aria-label", entries.length + " on leave, " + MONTH_FULL[month] + " " + day + ", " + year);
-      }
+      cell.className = "cal-cell clickable" + (key === todayKey ? " today" : "") + (entries.length ? " has-entries" : "") + (key === state.selectedDateKey ? " selected" : "");
+      cell.tabIndex = 0;
+      cell.setAttribute("role", "button");
+      cell.setAttribute("aria-label", (entries.length ? entries.length + " on leave" : "No one on leave") + ", " + MONTH_FULL[month] + " " + day + ", " + year);
       var dateEl = document.createElement("div");
       dateEl.className = "cal-date";
       dateEl.textContent = day;
@@ -923,17 +921,15 @@
       }
       cell.appendChild(chips);
 
-      if (entries.length){
-        var cellDateForLabel = new Date(year, month, day);
-        cell.addEventListener("click", function(k, d, ents, el){
-          return function(){ openDayDetail(k, d, ents, el); };
-        }(key, cellDateForLabel, entries, cell));
-        cell.addEventListener("keypress", function(k, d, ents, el){
-          return function(e){
-            if (e.key === "Enter" || e.key === " "){ openDayDetail(k, d, ents, el); }
-          };
-        }(key, cellDateForLabel, entries, cell));
-      }
+      var cellDateForLabel = new Date(year, month, day);
+      cell.addEventListener("click", function(k, d, ents, el){
+        return function(){ openDayDetail(k, d, ents, el); };
+      }(key, cellDateForLabel, entries, cell));
+      cell.addEventListener("keypress", function(k, d, ents, el){
+        return function(e){
+          if (e.key === "Enter" || e.key === " "){ openDayDetail(k, d, ents, el); }
+        };
+      }(key, cellDateForLabel, entries, cell));
 
       cal.appendChild(cell);
     }
