@@ -127,6 +127,21 @@
     position:relative;
   }
   .stat:last-child{border-right:none;}
+  .stat.clickable{
+    cursor:pointer;
+    transition:background-color .12s ease;
+  }
+  .stat.clickable:hover{background-color:rgba(0,0,0,0.04);}
+  .stat.clickable:focus{outline:2px solid var(--ink-soft); outline-offset:-2px;}
+  .stat.active{background-color:rgba(0,0,0,0.06);}
+  .stat.active::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:3px;
+    background:var(--ink);
+  }
+  .stat.active .label{color:var(--ink);}
   .stat .num{
     font-family:'IBM Plex Mono', monospace;
     font-weight:700;
@@ -594,7 +609,7 @@
     filtered: [],
     reportStart: null,
     reportEnd: null,
-    filters: { search:"", dept:"", status:"", type:"" },
+    filters: { search:"", dept:"", status:"", type:"", statBucket:"" },
     dayMap: {},
     selectedDateKey: null
   };
@@ -795,6 +810,7 @@
   function runFilters(){
     var f = state.filters;
     var q = f.search.trim().toLowerCase();
+    var today = new Date(); today.setHours(0,0,0,0);
     state.filtered = state.records.filter(function(r){
       if (f.dept && r["Department"] !== f.dept) return false;
       if (f.status && r["Status"] !== f.status) return false;
@@ -802,6 +818,17 @@
       if (q){
         var hay = ((r["Employee Name"]||"") + " " + (r["Employee Number"]||"")).toLowerCase();
         if (hay.indexOf(q) === -1) return false;
+      }
+      if (f.statBucket){
+        var sc = statusClass(r["Status"]);
+        if (f.statBucket === "rejectedOther"){
+          if (sc !== "rejected" && sc !== "other") return false;
+        } else if (f.statBucket === "onLeaveToday"){
+          var from = parseDate(r["From Date"]), to = parseDate(r["To Date"]);
+          if (sc !== "approved" || !from || !to || !(today >= from && today <= to)) return false;
+        } else if (sc !== f.statBucket){
+          return false;
+        }
       }
       return true;
     });
@@ -815,32 +842,50 @@
   // ---------- STATS ----------
   function renderStats(records){
     var total = records.length;
-    var approved = 0, pending = 0, rejected = 0, totalDays = 0, onLeaveToday = 0;
+    var approved = 0, pending = 0, rejectedOther = 0, totalDays = 0, onLeaveToday = 0;
     var today = new Date(); today.setHours(0,0,0,0);
     records.forEach(function(r){
       var sc = statusClass(r["Status"]);
       if (sc === "approved") approved++;
       else if (sc === "pending") pending++;
-      else if (sc === "rejected") rejected++;
+      else if (sc === "rejected" || sc === "other") rejectedOther++;
       var dur = parseFloat(r["Total Duration"]);
       if (!isNaN(dur)) totalDays += dur;
       var from = parseDate(r["From Date"]), to = parseDate(r["To Date"]);
       if (sc === "approved" && from && to && today >= from && today <= to) onLeaveToday++;
     });
     var stats = [
-      { label:"Total requests", value:total, cls:"" },
-      { label:"Approved", value:approved, cls:"accent-approved" },
-      { label:"Pending", value:pending, cls:"accent-pending" },
-      { label:"Rejected / other", value:rejected, cls:"accent-rejected" },
-      { label:"Total days requested", value:totalDays, cls:"" },
-      { label:"On leave today", value:onLeaveToday, cls:"accent-approved" }
+      { label:"Total requests", value:total, cls:"", bucket:"" },
+      { label:"Approved", value:approved, cls:"accent-approved", bucket:"approved" },
+      { label:"Pending", value:pending, cls:"accent-pending", bucket:"pending" },
+      { label:"Rejected / other", value:rejectedOther, cls:"accent-rejected", bucket:"rejectedOther" },
+      { label:"Total days requested", value:totalDays, cls:"", bucket:null },
+      { label:"On leave today", value:onLeaveToday, cls:"accent-approved", bucket:"onLeaveToday" }
     ];
     var wrap = document.getElementById("statsRow");
     wrap.innerHTML = "";
     stats.forEach(function(s){
       var div = document.createElement("div");
-      div.className = "stat";
+      var clickable = s.bucket !== null;
+      div.className = "stat" + (clickable ? " clickable" : "") + (clickable && state.filters.statBucket === s.bucket ? " active" : "");
       div.innerHTML = '<div class="num ' + s.cls + '">' + s.value + '</div><div class="label">' + s.label + '</div>';
+      if (clickable){
+        div.tabIndex = 0;
+        div.setAttribute("role", "button");
+        div.setAttribute("aria-pressed", state.filters.statBucket === s.bucket ? "true" : "false");
+        div.setAttribute("aria-label", "Filter by " + s.label);
+        var activate = function(bucket){
+          return function(){
+            state.filters.statBucket = (state.filters.statBucket === bucket) ? "" : bucket;
+            runFilters();
+            document.querySelector(".table-wrap").scrollIntoView({behavior:"smooth", block:"start"});
+          };
+        }(s.bucket);
+        div.addEventListener("click", activate);
+        div.addEventListener("keypress", function(e){
+          if (e.key === "Enter" || e.key === " "){ e.preventDefault(); activate(); }
+        });
+      }
       wrap.appendChild(div);
     });
   }
@@ -1117,7 +1162,7 @@
     state.filters.type = e.target.value; runFilters();
   });
   document.getElementById("clearFiltersBtn").addEventListener("click", function(){
-    state.filters = { search:"", dept:"", status:"", type:"" };
+    state.filters = { search:"", dept:"", status:"", type:"", statBucket:"" };
     document.getElementById("searchInput").value = "";
     document.getElementById("deptFilter").value = "";
     document.getElementById("statusFilter").value = "";
