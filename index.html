@@ -671,11 +671,19 @@
       if (!isNaN(year2) && !isNaN(month2) && !isNaN(day2)) return new Date(year2, month2, day2);
     }
 
-    // DD-MM-YYYY or DD/MM/YYYY (numeric, day-first — matches Keka/Indian exports)
-    m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    // DD-MM-YYYY (numeric, dash separator, day-first — matches Keka/Indian exports)
+    m = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (m){
       var day3 = parseInt(m[1], 10), month3 = parseInt(m[2], 10) - 1, year3 = parseInt(m[3], 10);
       if (!isNaN(day3) && !isNaN(month3) && !isNaN(year3) && month3 >= 0 && month3 <= 11) return new Date(year3, month3, day3);
+    }
+
+    // M/D/YYYY (numeric, slash separator, month-first — this export writes slash dates US-style,
+    // e.g. "7/11/2026" means 11 July, not 7 November)
+    m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m){
+      var month4 = parseInt(m[1], 10) - 1, day4 = parseInt(m[2], 10), year4 = parseInt(m[3], 10);
+      if (!isNaN(day4) && !isNaN(month4) && !isNaN(year4) && month4 >= 0 && month4 <= 11) return new Date(year4, month4, day4);
     }
 
     // Last resort: let the browser try (handles things like "Jul 1, 2026")
