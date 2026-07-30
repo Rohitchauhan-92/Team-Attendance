@@ -191,6 +191,15 @@
     min-width:150px;
   }
   .filters .search-field input{min-width:200px;}
+  .filters input[type="date"]{min-width:140px;}
+  .date-range-field{display:flex;align-items:flex-end;gap:6px;}
+  .date-range-field .filter-field{min-width:0;}
+  .date-range-sep{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    padding-bottom:8px;
+  }
   #clearFiltersBtn{
     align-self:flex-end;
     font-family:'IBM Plex Mono', monospace;
@@ -532,6 +541,17 @@
       <label for="typeFilter">Leave type</label>
       <select id="typeFilter"><option value="">All</option></select>
     </div>
+    <div class="date-range-field">
+      <div class="filter-field">
+        <label for="dateFromFilter">On leave from</label>
+        <input type="date" id="dateFromFilter">
+      </div>
+      <span class="date-range-sep">to</span>
+      <div class="filter-field">
+        <label for="dateToFilter">On leave to</label>
+        <input type="date" id="dateToFilter">
+      </div>
+    </div>
     <button id="clearFiltersBtn" type="button">Clear filters</button>
     <span class="result-count" id="resultCount"></span>
   </section>
@@ -609,7 +629,7 @@
     filtered: [],
     reportStart: null,
     reportEnd: null,
-    filters: { search:"", dept:"", status:"", type:"", statBucket:"" },
+    filters: { search:"", dept:"", status:"", type:"", statBucket:"", dateFrom:"", dateTo:"" },
     dayMap: {},
     selectedDateKey: null
   };
@@ -706,6 +726,13 @@
     if (!isNaN(native.getTime())) return new Date(native.getFullYear(), native.getMonth(), native.getDate());
 
     return null;
+  }
+
+  function parseIsoDate(str){
+    if (!str) return null;
+    var m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
   }
 
   function dateKey(d){
@@ -818,6 +845,18 @@
       if (q){
         var hay = ((r["Employee Name"]||"") + " " + (r["Employee Number"]||"")).toLowerCase();
         if (hay.indexOf(q) === -1) return false;
+      }
+      if (f.dateFrom || f.dateTo){
+        var recFrom = parseDate(r["From Date"]), recTo = parseDate(r["To Date"]);
+        if (!recFrom || !recTo) return false;
+        if (f.dateFrom){
+          var rangeFrom = parseIsoDate(f.dateFrom);
+          if (rangeFrom && recTo < rangeFrom) return false;
+        }
+        if (f.dateTo){
+          var rangeTo = parseIsoDate(f.dateTo);
+          if (rangeTo && recFrom > rangeTo) return false;
+        }
       }
       if (f.statBucket){
         var sc = statusClass(r["Status"]);
@@ -1161,12 +1200,20 @@
   document.getElementById("typeFilter").addEventListener("change", function(e){
     state.filters.type = e.target.value; runFilters();
   });
+  document.getElementById("dateFromFilter").addEventListener("change", function(e){
+    state.filters.dateFrom = e.target.value; runFilters();
+  });
+  document.getElementById("dateToFilter").addEventListener("change", function(e){
+    state.filters.dateTo = e.target.value; runFilters();
+  });
   document.getElementById("clearFiltersBtn").addEventListener("click", function(){
-    state.filters = { search:"", dept:"", status:"", type:"", statBucket:"" };
+    state.filters = { search:"", dept:"", status:"", type:"", statBucket:"", dateFrom:"", dateTo:"" };
     document.getElementById("searchInput").value = "";
     document.getElementById("deptFilter").value = "";
     document.getElementById("statusFilter").value = "";
     document.getElementById("typeFilter").value = "";
+    document.getElementById("dateFromFilter").value = "";
+    document.getElementById("dateToFilter").value = "";
     runFilters();
   });
   document.getElementById("refreshBtn").addEventListener("click", loadData);
