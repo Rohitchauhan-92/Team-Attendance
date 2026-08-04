@@ -230,7 +230,56 @@
     color:var(--gold);
     padding:24px 40px 0;
     margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
   }
+  .cal-nav{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .cal-nav-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    line-height:1;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    width:26px;
+    height:26px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cal-nav-btn:hover{background:var(--stamp-approved);}
+  .cal-nav-btn:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+  .cal-month-label{
+    font-family:'Special Elite', monospace;
+    font-size:15px;
+    letter-spacing:.02em;
+    text-transform:none;
+    color:var(--ink);
+    min-width:150px;
+    text-align:center;
+  }
+  .cal-today-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:none;
+    border:1px solid var(--rule-strong);
+    color:var(--ink-soft);
+    padding:5px 9px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .cal-today-btn:hover{border-color:var(--gold); color:var(--gold);}
   .calendar-wrap{padding:12px 40px 26px; overflow-x:auto;}
   .calendar{
     display:grid;
@@ -556,7 +605,15 @@
     <span class="result-count" id="resultCount"></span>
   </section>
 
-  <h2 class="section-title">Monthly coverage</h2>
+  <h2 class="section-title">
+    <span>Monthly coverage</span>
+    <span class="cal-nav">
+      <button id="calPrevBtn" type="button" class="cal-nav-btn" aria-label="Previous month">‹</button>
+      <span id="calMonthLabel" class="cal-month-label">—</span>
+      <button id="calNextBtn" type="button" class="cal-nav-btn" aria-label="Next month">›</button>
+      <button id="calTodayBtn" type="button" class="cal-today-btn">Today</button>
+    </span>
+  </h2>
   <div class="calendar-wrap">
     <div class="calendar" id="calendar"></div>
   </div>
@@ -631,7 +688,9 @@
     reportEnd: null,
     filters: { search:"", dept:"", status:"", type:"", statBucket:"", dateFrom:"", dateTo:"" },
     dayMap: {},
-    selectedDateKey: null
+    selectedDateKey: null,
+    calYear: null,
+    calMonth: null
   };
 
   document.getElementById("sourceLink").href = SHEET_CSV_URL;
@@ -789,6 +848,12 @@
     document.getElementById("periodLabel").textContent =
       formatDateLong(state.reportStart) + " – " + formatDateLong(state.reportEnd);
 
+    // Default the calendar view to the report period's month (only on first load).
+    if (state.calYear === null){
+      state.calYear = state.reportStart.getFullYear();
+      state.calMonth = state.reportStart.getMonth();
+    }
+
     setSyncState(isLive ? "live" : "cached");
     document.getElementById("syncedAt").textContent = "as of " + new Date().toLocaleString();
 
@@ -933,10 +998,13 @@
   function renderCalendar(records){
     var cal = document.getElementById("calendar");
     cal.innerHTML = "";
-    if (!state.reportStart) return;
+    if (state.calYear === null || state.calMonth === null) return;
 
-    var year = state.reportStart.getFullYear();
-    var month = state.reportStart.getMonth();
+    var year = state.calYear;
+    var month = state.calMonth;
+
+    document.getElementById("calMonthLabel").textContent = MONTH_FULL[month] + " " + year;
+
     var daysInMonth = new Date(year, month+1, 0).getDate();
     var firstDow = new Date(year, month, 1).getDay();
 
@@ -1031,6 +1099,15 @@
     } else if (state.selectedDateKey){
       closeDayDetail();
     }
+  }
+
+  function goToMonth(year, month){
+    // Normalize month overflow/underflow (e.g. month = -1 or 12) into a valid year/month pair.
+    var normalized = new Date(year, month, 1);
+    state.calYear = normalized.getFullYear();
+    state.calMonth = normalized.getMonth();
+    closeDayDetail();
+    renderCalendar(state.filtered);
   }
 
   // ---------- DAY DETAIL PANEL ----------
@@ -1218,6 +1295,16 @@
   });
   document.getElementById("refreshBtn").addEventListener("click", loadData);
   document.getElementById("dayDetailClose").addEventListener("click", closeDayDetail);
+  document.getElementById("calPrevBtn").addEventListener("click", function(){
+    goToMonth(state.calYear, state.calMonth - 1);
+  });
+  document.getElementById("calNextBtn").addEventListener("click", function(){
+    goToMonth(state.calYear, state.calMonth + 1);
+  });
+  document.getElementById("calTodayBtn").addEventListener("click", function(){
+    var today = new Date();
+    goToMonth(today.getFullYear(), today.getMonth());
+  });
 
   loadData();
 })();
